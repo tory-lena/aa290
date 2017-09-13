@@ -7,7 +7,7 @@ clear all
 [Prob, s] =def_MP(name, tf, Q, R, m, n, N, x_con, u_con, xyz_0, xyz_f, v_i);
 [x_star, u_star, tau]=comp_MP(Prob, s, x_con, m, n, N, 1000);
 
-%% run
+%% run ----------------------------------  controller
 %initialize
 [k, x]= simctrl(x_star, u_star, tau);
 x_curr=x; t_curr=tau(k);
