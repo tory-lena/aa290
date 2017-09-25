@@ -1,4 +1,4 @@
-function [x, u, o, V, tau]=check_res(sol, tf, x_con, m, N, n, t, incr)
+function [x, u, o, V, tau, x0, x_sol, u_sol]=check_res(sol, tf, x_con, m, N, n, t, incr)
 
 if tf==-1
 tf=sol(end);
@@ -68,15 +68,6 @@ o(i,:)=M*inv(T)*[1;0;0];
 V(i,:)=M*inv(T)*[u;v;w];
 end
 
-%% retrace path with computed control input
-
-% x_ref(1,:)=x(1,:);
-% for i=1:N+1
-%     dx(i, :)=ode_290(x_ref(i,:), u(i,:))';
-%     x_ref(i+1,:)=x_ref(i,:)+dx(i, :);
-% end
-
-
 %% give entire smoothened path
 
 dt=tf/incr;
@@ -93,8 +84,39 @@ for i=1:n
     u(:,i)=flip(U(i:n:end)'*L)';
 end
 
+%% retrace path with computed control input
+
+% [t, w]=chebyshev(N);
+% t=flip(t);
+T=(flip(t)+1)/2*tf;
+%u_sol(:, 4)=-u_sol(:, 4);
+
+clear a
+a=400;
+err=10;
+[k, x0, reset1]=simctrl(x, u, tau, err); %[k, x_r]=simctrl(x_sol, u_sol, T, 1000);
+[k, x_r, reset2]=simctrl(x_sol, u_sol, T, err);
+figure()
+plot3(x0(:, 10), -x0(:, 11), -x0(:, 12), 'r-')
+hold on
+plot3(x_r(:, 10), -x_r(:, 11), -x_r(:, 12), 'k-')
+plot3(x(:, 10), -x(:, 11), -x(:, 12), 'b-')
+legend('x_{ctrl, lagrange}','x_{ctrl, result}','x^*')
+axis([-a a -a a -a a])
+title(['N=' num2str(N) ', U^*, reset at e=' num2str(err) ])
+grid on
+clear a
+
+
+
 
 %% ode
+
+% clear x
+% 
+% step_l=k;
+% T=tau(step_l+1);
+
 % x0(1,:)=x(1,:);
 % clear k
 % for k=1:incr

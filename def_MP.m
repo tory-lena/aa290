@@ -8,16 +8,20 @@ end
 x_U=x_con(:,2); 
 x_L=x_con(:,1);
 
+x_Urun=x_con(:, 4); 
+x_Lrun=x_con(:, 3);
+
 %control const
 u_U=u_con(:,2);
 u_L=u_con(:,1);
 
 %time
-max_t=5000;
+max_t=10^(4);
 
 %joint const
-xu_U=[kron(ones(N+1, 1),x_U);kron(ones(N+1, 1), u_U); max_t];
-xu_L=[kron(ones(N+1, 1),x_L);kron(ones(N+1, 1), u_L); 0];
+run_n=N/10;
+xu_U=[kron(ones(N+1-run_n, 1),x_U); kron(ones(run_n,1), x_Urun); kron(ones(N+1, 1), u_U); max_t];
+xu_L=[kron(ones(N+1-run_n, 1),x_L);kron(ones(run_n,1), x_Lrun); kron(ones(N+1, 1), u_L); 0];
 
 % get t, w
 [t, w]=chebyshev(N);
@@ -42,7 +46,8 @@ c_U=zeros(m*(N+1),1);
 c_L=c_U;
 
 %initial guess
-yaw_f=.5*pi;
+yaw_f=.0*pi;%+pi
+yaw_i=-.5*pi;
 r=round(N/4);
 xu0=[ones((m+n)*(N+1), 1)*.5;3*60];
 
@@ -56,9 +61,9 @@ xu0(6:m:m*(N+1))=20*[linspace(0,1, 2*r)'; linspace(1,0, (N+1)-2*r)'];
 
 xu0(7:m:m*(N+1))=zeros((N+1),1);
 %xu0(8:m:m*(N+1))=[zeros(1, r), .2*pi*ones(1, (N+1)-2*r),zeros(1, r)]';
-xu0(9:m:m*(N+1))=yaw_f*[linspace(0, 1, (N+1)-r), ones(1, r)]';
+xu0(9:m:m*(N+1))=yaw_i*[linspace(1, 0, (N+1)-r), ones(1, r)]';
 
-xu0(10:m:m*(N+1))=[ones((N+1), 1)*xyz_0(1)+(xyz_f(1)-xyz_0(1))*[linspace(0, 1.2,(N+1)-r), linspace(1.2, 1, r)]'];
+xu0(10:m:m*(N+1))=[ones((N+1), 1)*xyz_0(1)+(xyz_f(1)-xyz_0(1))*[linspace(0, 1,(N+1)-r),ones(1,r)]'];% linspace(.8, 1, r)]'];
 xu0(11:m:m*(N+1))=[ones((N+1), 1)*xyz_0(2)+(xyz_f(2)-xyz_0(2))*[zeros(1,r), linspace(0, 1,(N+1)-2*r), ones(1,r)]'];%, linspace(1, 1, r)]'];
 xu0(12:m:m*(N+1))=[ones(4, 1)*xyz_0(3); ones((N+1)-4, 1)*xyz_0(3)-(xyz_0(3)-xyz_f(3))*[linspace(0, 1, (N+1)-8), ones(1,4)]'];
 
@@ -75,16 +80,10 @@ Aeq(13:24, m*N+1: m*N+12)=eye(12);
 Aeq(25:28, m*(N+1)+n*N+1:m*(N+1)+n*N+4)=eye(4);
 u_f=[0 0 0 0];u_f_dev=[10 pi*.25 .01 5];
 
-mean=[0 0 0, v_i(1) v_i(2) v_i(3), 0 0 0, xyz_0, 0 0 0, 0 0 0, 0 0 yaw_f, xyz_f, u_f]'; %+pi
+mean=[0 0 0, v_i(1) v_i(2) v_i(3), 0 0 yaw_i, xyz_0, 0 0 0, 0 0 0, 0 0 yaw_f, xyz_f, u_f]'; 
 dev=[0.1 0.1 0.1, .1 .1 .1, .05 .05 .05, .005 .005 .005, 0.1 0.1 0.1, 1 1 1, .01 .01 .01, 5 5 .1, u_f_dev]';
 b_L=mean-dev;
 b_U=mean+dev;
-
-% b_U=[[.1 .1 .1, 10 2 2, 0 0 0, xyz_0],...
-%     .1 .1 .1, .1 .1 .1, 0 .1 .5, .5 .5 .1]';
-% b_L=[[-.1 -.1 -.1, 0 0 0, 0 0 0, xyz_0],...
-%     -1 -1 -0.1, 0 0 0, 0 -.1 .5, -.5 -.5 -.1]';
-
 
 %PB defintion
 
@@ -92,6 +91,6 @@ b_U=mean+dev;
 
 Prob = conAssign(f, G, H, [], xu_L, xu_U, Name, xu0, ...
                      [], 0, Aeq, b_L, b_U, c, [], [], [], c_L, c_U, ...
-                     [],[],[],[]); %n(f, G, H  %@(xu) xu(end), [], []
+                     [],[],[],[]); %n(f, G, H OR  %@(xu) xu(end), [], []
 
 end
